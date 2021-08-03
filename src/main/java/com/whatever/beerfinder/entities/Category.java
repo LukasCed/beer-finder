@@ -1,4 +1,4 @@
-package com.whatever.beerfinder.models;
+package com.whatever.beerfinder.entities;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
