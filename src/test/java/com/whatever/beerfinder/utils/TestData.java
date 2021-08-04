@@ -43,15 +43,5 @@ public class TestData {
                     "54885", "Lithuania", "5857465",
                     "www.kazkas5.lt", "", "Very gut", 0, new Timestamp(System.currentTimeMillis()))
     ));
-    public static final List<Category> CATEGORIES = new ArrayList<>(
-            Arrays.asList(
-                    new Category(1, "Skanus", new Timestamp(System.currentTimeMillis())),
-                    new Category(2, "Neskanus", new Timestamp(System.currentTimeMillis()))
-            )
-    );
-    public static final List<Style> STYLES = new ArrayList<>(Arrays.asList(
-            new Style(1, 1, "Saldus", new Timestamp(System.currentTimeMillis())),
-            new Style(2, 2, "Porugstis", new Timestamp(System.currentTimeMillis()))
-    )
-    );
+
 }

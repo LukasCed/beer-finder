@@ -12,6 +12,7 @@ public class BreweryLocation {
     private final double latitude;
     private final double longitude;
     private final String name;
+    private double distanceFromOptimalBrewery;
     private boolean traversed;
 
     @Override

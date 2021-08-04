@@ -1,6 +1,7 @@
 package com.whatever.beerfinder.controllers;
 
 import com.whatever.beerfinder.models.BreweryLocation;
+import com.whatever.beerfinder.services.BeerCollectorService;
 import com.whatever.beerfinder.services.BreweryPathFinderService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,23 +10,27 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.List;
 import java.util.Stack;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.when;
 
-public class BreweryPathFinderControllerTest {
+public class BreweryAndBeerFinderControllerTest {
 
     private AutoCloseable mocksClosable;
-    private BreweryPathFinderController breweryPathFinderController;
+    private BreweryAndBeerFinderController breweryAndBeerFinderController;
     @Mock
     private BreweryPathFinderService breweryPathFinderService;
+    @Mock
+    private BeerCollectorService beerCollectorService;
 
     @BeforeEach
     public void setUp() {
         mocksClosable = MockitoAnnotations.openMocks(this);
-        breweryPathFinderController = new BreweryPathFinderController(breweryPathFinderService);
+        breweryAndBeerFinderController = new BreweryAndBeerFinderController(breweryPathFinderService,
+                beerCollectorService);
     }
 
     @AfterEach
@@ -42,14 +47,15 @@ public class BreweryPathFinderControllerTest {
         when(breweryPathFinderService.findBestPathFromStartingPoint(breweryLocationArgumentCaptor.capture()))
                 .thenReturn(breweryLocations);
 
-        Stack<BreweryLocation> bestPathFromStartingPoint = breweryPathFinderController.findBestPathFromStartingPoint(1.0, 1.4);
+        List<BreweryLocation> bestPathFromStartingPoint = breweryAndBeerFinderController.findBestPathFromStartingPoint(1.0, 1.4);
 
         BreweryLocation passedBreweryLocation = breweryLocationArgumentCaptor.getValue();
         assertEquals(-1, passedBreweryLocation.getBreweryId());
         assertEquals(1.0, passedBreweryLocation.getLatitude());
         assertEquals(1.4, passedBreweryLocation.getLongitude());
         assertEquals("HOME", passedBreweryLocation.getName());
-        assertEquals(14, bestPathFromStartingPoint.pop().getBreweryId());
-        assertTrue(bestPathFromStartingPoint.isEmpty());
+        assertNotNull(bestPathFromStartingPoint);
+        assertEquals(1, bestPathFromStartingPoint.size());
+        assertEquals(14, bestPathFromStartingPoint.get(0).getBreweryId());
     }
 }

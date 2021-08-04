@@ -20,12 +20,10 @@ public class BreweryPathFinderService {
     private final BreweryDistanceMatrixBuilder breweryDistanceMatrixBuilder = new BreweryDistanceMatrixBuilder();
     private HashMap<BreweryLocation, HashMap<BreweryLocation, Double>> distancesBetweenBreweries = new HashMap<>();
 
-    public Stack<BreweryLocation> findBestPathFromStartingPoint(BreweryLocation startingPoint) {
+    public List<BreweryLocation> findBestPathFromStartingPoint(BreweryLocation startingPoint) {
         initialize(startingPoint);
-        Stack<BreweryLocation> breweryTraversalPath = new Stack<>();
         BreweryPath path = getPath(startingPoint, startingPoint, MAX_KM);
-
-        return breweryTraversalPath;
+        return unwrapPath(path);
     }
 
     private BreweryPath getPath(BreweryLocation from, BreweryLocation finalDestination, Double distanceLeft
@@ -106,5 +104,20 @@ public class BreweryPathFinderService {
 
     private Optional<Geocode> findGeocodeOfBrewery(Brewery brewery, List<Geocode> geocodeList) {
         return geocodeList.stream().filter(geocode -> Objects.equals(geocode.getBreweryId(), brewery.getId())).findFirst();
+    }
+
+    private List<BreweryLocation> unwrapPath(BreweryPath path) {
+        if (path == null) {
+            return new ArrayList<>();
+        }
+        List<BreweryLocation> breweryLocationList = new ArrayList<>();
+
+        double distanceFromPrevious = path.getDistanceFromPrevious() == null ? 0 : path.getDistanceFromPrevious();
+        BreweryLocation brewery = new BreweryLocation(path.getBrewery().getBreweryId(), path.getBrewery().getLatitude(),
+                path.getBrewery().getLongitude(), path.getBrewery().getName());
+        brewery.setDistanceFromOptimalBrewery(distanceFromPrevious);
+        breweryLocationList.add(brewery);
+        breweryLocationList.addAll(unwrapPath(path.getNextNode()));
+        return breweryLocationList;
     }
 }

@@ -13,7 +13,7 @@ public class BeerDataDao {
         return new ArrayList<>();
     }
 
-    public List<Beer> listBeers() {
+    public List<Beer> listBeers(List<Integer> breweryIds) {
         return new ArrayList<>();
     }
 
@@ -21,11 +21,4 @@ public class BeerDataDao {
         return new ArrayList<>();
     }
 
-    public List<Category> listCategories() {
-        return new ArrayList<>();
-    }
-
-    public List<Style> listStyles() {
-        return new ArrayList<>();
-    }
 }
