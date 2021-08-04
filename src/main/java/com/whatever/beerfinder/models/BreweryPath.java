@@ -8,7 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class BreweryPath {
-    private final BreweryLocation brewery;
+    private final BreweryLocationNode brewery;
     private final BreweryPath nextNode;
     private final Integer steps;
     private Double distanceFromPrevious;

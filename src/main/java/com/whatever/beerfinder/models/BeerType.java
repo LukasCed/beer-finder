@@ -8,5 +8,5 @@ import lombok.Setter;
 @Setter
 @RequiredArgsConstructor
 public class BeerType {
-    private final String name;
+    private final String typeName;
 }
