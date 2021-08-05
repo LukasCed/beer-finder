@@ -1,6 +1,6 @@
 # beer-finder
 Program to find (optimal?) path around the breweries
 
-How to run: 
+How to install: 
 TODO
 
