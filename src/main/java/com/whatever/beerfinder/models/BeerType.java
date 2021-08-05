@@ -9,4 +9,9 @@ import lombok.Setter;
 @RequiredArgsConstructor
 public class BeerType {
     private final String typeName;
+
+    @Override
+    public String toString() {
+        return typeName;
+    }
 }

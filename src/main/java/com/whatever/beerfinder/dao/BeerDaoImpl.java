@@ -17,7 +17,7 @@ public class BeerDaoImpl extends DataDaoImpl<Beer> implements BeerDao {
         CriteriaBuilder builder = entityManager.getCriteriaBuilder();
         CriteriaQuery<Beer> cr = builder.createQuery(Beer.class);
         Root<Beer> root = cr.from(Beer.class);
-        cr.select(root).where(root.get("brewery_id").in(breweryIds));
+        cr.select(root).where(root.get("breweryId").in(breweryIds));
 
         TypedQuery<Beer> query = entityManager.createQuery(cr);
         return query.getResultList();

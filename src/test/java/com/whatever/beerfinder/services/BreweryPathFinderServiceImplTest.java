@@ -1,11 +1,9 @@
 package com.whatever.beerfinder.services;
 
 import com.whatever.beerfinder.config.PathFinderConfig;
-import com.whatever.beerfinder.dao.BeerDaoImpl;
-import com.whatever.beerfinder.dao.interfaces.BeerDao;
 import com.whatever.beerfinder.dao.interfaces.BreweryDao;
 import com.whatever.beerfinder.dao.interfaces.GeocodeDao;
-import com.whatever.beerfinder.models.BreweryLocationNode;
+import com.whatever.beerfinder.models.BreweryNode;
 import com.whatever.beerfinder.utils.TestData;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
@@ -39,6 +37,7 @@ public class BreweryPathFinderServiceImplTest {
         when(breweryDao.list()).thenReturn(TestData.BREWERIES);
         when(geocodeDao.list()).thenReturn(TestData.GEOCODES);
         when(pathFinderConfig.getMaxDistanceKm()).thenReturn(20000.0);
+        when(pathFinderConfig.getMaxDepth()).thenReturn(20);
     }
 
     @AfterEach
@@ -48,20 +47,20 @@ public class BreweryPathFinderServiceImplTest {
 
     @Test
     public void findBestPathFromStartingPoint_success() {
-        BreweryLocationNode startingPoint = new BreweryLocationNode(-1, 35.01, -97.9, "HOME");
-        List<BreweryLocationNode> bestPathFromStartingPoint = breweryPathFinderServiceImpl.findBestPathFromStartingPoint(startingPoint);
+        BreweryNode startingPoint = new BreweryNode(-1, 35.01, -97.9, "HOME");
+        List<BreweryNode> bestPathFromStartingPoint = breweryPathFinderServiceImpl.findBestPathFromStartingPoint(startingPoint);
         assertNotNull(bestPathFromStartingPoint);
 
         Assertions.assertThat(bestPathFromStartingPoint)
                 .hasSize(7)
-                .extracting(BreweryLocationNode::getBreweryId)
+                .extracting(BreweryNode::getBreweryId)
                 .containsExactlyInAnyOrder(-1, 5, 1, 2, 4, 3, -1);
     }
 
     @Test
     public void findBestPathFromStartingPoint_pathIsEmpty_ifStartingPointTooFarAway() {
-        BreweryLocationNode startingPoint = new BreweryLocationNode(-1, -90.00, -90.0, "HOME");
-        List<BreweryLocationNode> bestPathFromStartingPoint = breweryPathFinderServiceImpl.findBestPathFromStartingPoint(startingPoint);
+        BreweryNode startingPoint = new BreweryNode(-1, -90.00, -90.0, "HOME");
+        List<BreweryNode> bestPathFromStartingPoint = breweryPathFinderServiceImpl.findBestPathFromStartingPoint(startingPoint);
         assertNotNull(bestPathFromStartingPoint);
 
         Assertions.assertThat(bestPathFromStartingPoint)

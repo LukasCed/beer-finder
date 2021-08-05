@@ -9,4 +9,6 @@ import org.springframework.context.annotation.Configuration;
 public class PathFinderConfig {
     @Value("${max-distance-km}")
     private Double maxDistanceKm;
+    @Value("${max-depth}")
+    private Integer maxDepth;
 }

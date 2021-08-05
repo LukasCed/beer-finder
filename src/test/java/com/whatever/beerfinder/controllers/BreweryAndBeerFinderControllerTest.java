@@ -1,13 +1,15 @@
 package com.whatever.beerfinder.controllers;
 
-import com.whatever.beerfinder.models.BreweryLocationNode;
+import com.whatever.beerfinder.models.BreweryNode;
 import com.whatever.beerfinder.services.BeerCollectorServiceImpl;
+import com.whatever.beerfinder.services.BeerCollectorServiceImplTest;
 import com.whatever.beerfinder.services.BreweryPathFinderServiceImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.util.ArrayList;
@@ -15,6 +17,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class BreweryAndBeerFinderControllerTest {
@@ -40,20 +44,23 @@ public class BreweryAndBeerFinderControllerTest {
 
     @Test
     public void findBestPathFromStartingPoint_success() {
-        List<BreweryLocationNode> breweryLocationNodes = new ArrayList<>();
-        breweryLocationNodes.add(new BreweryLocationNode(14, 1.0, 1.4, "test"));
+        List<BreweryNode> breweryNodes = new ArrayList<>();
+        breweryNodes.add(new BreweryNode(14, 1.0, 1.4, "test"));
 
-        ArgumentCaptor<BreweryLocationNode> breweryLocationArgumentCaptor = ArgumentCaptor.forClass(BreweryLocationNode.class);
-        when(breweryPathFinderServiceImpl.findBestPathFromStartingPoint(breweryLocationArgumentCaptor.capture()))
-                .thenReturn(breweryLocationNodes);
+        ArgumentCaptor<BreweryNode> breweryLocationArgumentCaptor = ArgumentCaptor.forClass(BreweryNode.class);
+        when(breweryPathFinderServiceImpl.findBestPathFromStartingPoint(any()))
+                .thenReturn(breweryNodes);
 
-        List<BreweryLocationNode> bestPathFromStartingPoint = breweryAndBeerFinderController.findBestPathFromStartingPoint(1.0, 1.4);
+        List<BreweryNode> bestPathFromStartingPoint = breweryAndBeerFinderController.findBestPathFromStartingPoint(1.0, 1.4);
 
-        BreweryLocationNode passedBreweryLocationNode = breweryLocationArgumentCaptor.getValue();
-        assertEquals(-1, passedBreweryLocationNode.getBreweryId());
-        assertEquals(1.0, passedBreweryLocationNode.getLatitude());
-        assertEquals(1.4, passedBreweryLocationNode.getLongitude());
-        assertEquals("HOME", passedBreweryLocationNode.getName());
+        verify(breweryPathFinderServiceImpl, Mockito.times(1))
+                .findBestPathFromStartingPoint(breweryLocationArgumentCaptor.capture());
+
+        BreweryNode passedBreweryNode = breweryLocationArgumentCaptor.getValue();
+        assertEquals(-1, passedBreweryNode.getBreweryId());
+        assertEquals(1.0, passedBreweryNode.getLatitude());
+        assertEquals(1.4, passedBreweryNode.getLongitude());
+        assertEquals("HOME", passedBreweryNode.getName());
         assertNotNull(bestPathFromStartingPoint);
         assertEquals(1, bestPathFromStartingPoint.size());
         assertEquals(14, bestPathFromStartingPoint.get(0).getBreweryId());

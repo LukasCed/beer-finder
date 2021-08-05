@@ -2,7 +2,7 @@ package com.whatever.beerfinder;
 
 import com.whatever.beerfinder.controllers.BreweryAndBeerFinderController;
 import com.whatever.beerfinder.models.BeerType;
-import com.whatever.beerfinder.models.BreweryLocationNode;
+import com.whatever.beerfinder.models.BreweryNode;
 import com.whatever.beerfinder.models.exceptions.ArgumentParseException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,15 +30,20 @@ public class BreweryAndBeerFinderApplication implements CommandLineRunner {
             double lat = parseArgs(0, args);
             double longt = parseArgs(1, args);
 
-            List<BreweryLocationNode> bestPathFromStartingPoint = breweryAndBeerFinderController
+            long startTime = System.currentTimeMillis();
+            List<BreweryNode> bestPathFromStartingPoint = breweryAndBeerFinderController
                     .findBestPathFromStartingPoint(lat, longt);
             List<Integer> ids = bestPathFromStartingPoint.stream()
-                    .map(BreweryLocationNode::getBreweryId)
+                    .map(BreweryNode::getBreweryId)
                     .collect(Collectors.toList());
             List<BeerType> relatedBeers = breweryAndBeerFinderController.findRelatedBeers(ids);
+            long endTime = System.currentTimeMillis();
 
             bestPathFromStartingPoint.forEach(System.out::println);
+            System.out.println("Beer types:");
             relatedBeers.forEach(System.out::println);
+
+            System.out.println("Program took: " + (endTime - startTime) + " ms");
         } catch (ArgumentParseException e) {
             log.error("Bad arguments! Use this format: x.zzz... y.zzz.., where x is any number for latitude, " +
                     "y is any number for longitude, z are decimal digits. For example: 98.4471 85.6432. Provided: {}",

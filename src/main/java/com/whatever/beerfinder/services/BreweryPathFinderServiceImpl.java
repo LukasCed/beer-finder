@@ -6,9 +6,9 @@ import com.whatever.beerfinder.dao.interfaces.BreweryDao;
 import com.whatever.beerfinder.dao.interfaces.GeocodeDao;
 import com.whatever.beerfinder.entities.Brewery;
 import com.whatever.beerfinder.entities.Geocode;
-import com.whatever.beerfinder.models.BreweryLocationNode;
+import com.whatever.beerfinder.models.BreweryNode;
 import com.whatever.beerfinder.models.BreweryPath;
-import com.whatever.beerfinder.utils.MathUtils;
+import com.whatever.beerfinder.models.BreweryTreeMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,76 +24,62 @@ public class BreweryPathFinderServiceImpl {
     private final BreweryDao breweryDao;
     private final GeocodeDao geocodeDao;
     private final BreweryDistanceMatrixBuilder breweryDistanceMatrixBuilder = new BreweryDistanceMatrixBuilder();
-    private HashMap<BreweryLocationNode, HashMap<BreweryLocationNode, Double>> distancesBetweenBreweries = new HashMap<>();
-    private HashMap<Integer, BreweryPath> cache = new HashMap<>();
+    private HashMap<BreweryNode, BreweryTreeMap> distancesBetweenBreweries = new HashMap<>();
 
     /**
      * Finds the optimal path to visit as many breweries as possible from a given starting point, where the
      * maximum traverseble distance is a configurable application parameter.
-     * @param startingPoint - starting point of the path.
-     * @return list of {@link BreweryLocationNode} which represents the path from starting location to starting location
-     * by visiting as many breweries as possible.
      *
+     * @param startingPoint - starting point of the path.
+     * @return list of {@link BreweryNode} which represents the path from starting location to starting location
+     * by visiting as many breweries as possible.
+     * <p>
      * The path is calculated roughly as follows:
      * To find the best path from A to B, we need to find the best path to B from the immediate neighbours of A, choose it,
      * and add path A to B to it. It's a recursive problem. so:
-     *
+     * <p>
      * BestPath(A, B, DISTANCE_LEFT) = BestPath(A, X, D1) appened to BestPath(X, B, DISTANCE_LEFT - D1)
-     *
+     * <p>
      * where BestPath(X, B, DISTANCE_LEFT) is such X that Max(1 + Steps(X1, B), 1 + Steps(X2, B, 1 + Steps(X2, B)...) where X1, X2.. c X
      * are A neighbours, considering distance left.
      * and BestPath(A, X) is simply A to the optimal X (one step).
-     *
-     * For slight speed improvement cache is used.
      */
-    public List<BreweryLocationNode> findBestPathFromStartingPoint(BreweryLocationNode startingPoint) {
+    public List<BreweryNode> findBestPathFromStartingPoint(BreweryNode startingPoint) {
+        log.info("Starting the best find calculating function - please stand by..");
         initialize(startingPoint);
-        BreweryPath path = getPath(startingPoint, startingPoint, pathFinderConfig.getMaxDistanceKm());
+        BreweryPath path = getPath(startingPoint, startingPoint, pathFinderConfig.getMaxDistanceKm(), 0);
         return unwrapPath(path);
     }
 
-    private BreweryPath getPath(BreweryLocationNode from, BreweryLocationNode finalDestination, Double distanceLeft
+    private BreweryPath getPath(BreweryNode from, BreweryNode finalDestination, Double distanceLeft, int depth
     ) {
-
-        BreweryPath cachedPath = getFromCache(from, finalDestination, distanceLeft);
-        if (cachedPath != null) {
-            unmarkNodeAsVisited(from);
-            return cachedPath;
-        }
-
-        HashMap<BreweryLocationNode, Double> neighbouringBreweries = distancesBetweenBreweries.get(from);
-        Integer maxBreweriesVisited = -1;
-        BreweryPath longestBreweryPath = null;
-        markNodeAsVisited(from);
-
-        if (distanceLeft <= 0) {
-            unmarkNodeAsVisited(from);
+        if (depth > pathFinderConfig.getMaxDepth()) {
             return null;
         }
+        BreweryTreeMap neighbouringBreweries = distancesBetweenBreweries.get(from);
+        Integer maxBreweriesVisited = -1;
+        BreweryPath longestBreweryPath = null;
 
         if (nodeIsTheStartingNode(from, finalDestination) && !Objects.equals(distanceLeft,
                 pathFinderConfig.getMaxDistanceKm())) {
             return new BreweryPath(finalDestination, null, 0);
         }
+        markNodeAsVisited(from);
 
-        for (Map.Entry<BreweryLocationNode, Double> neighbourBreweryAndDistance : neighbouringBreweries.entrySet()) {
-            if (neighbourBreweryAndDistance.getValue() > 0) {
-                Double distanceToNextBrewery = neighbourBreweryAndDistance.getValue();
-                BreweryLocationNode nextBrewery = neighbourBreweryAndDistance.getKey();
-                if (!nextBrewery.isTraversed() || nodeIsTheStartingNode(nextBrewery, finalDestination)) {
-                    Double newDistance = distanceLeft - distanceToNextBrewery;
+        for (Map.Entry<Double, BreweryNode> neighbourBreweryAndDistance : neighbouringBreweries.entrySet()) {
+            Double distanceToNextBrewery = neighbourBreweryAndDistance.getKey();
+            BreweryNode nextBrewery = neighbourBreweryAndDistance.getValue();
 
-                    BreweryPath breweryPath = getPath(nextBrewery, finalDestination, newDistance);
+            BreweryPath pathFromNextNode = getPathFromNextNode(distanceToNextBrewery, nextBrewery, finalDestination,
+                    distanceLeft, depth);
 
-                    if (breweryPath != null && breweryPath.getSteps() > maxBreweriesVisited) {
-                        breweryPath.setDistanceFromPrevious(distanceToNextBrewery);
-                        maxBreweriesVisited = breweryPath.getSteps();
-                        System.out.println("Longest path yet: " + maxBreweriesVisited);
-                        longestBreweryPath = breweryPath;
-                    }
-                }
+            if (pathFromNextNode != null && pathFromNextNode.getSteps() > maxBreweriesVisited) {
+                pathFromNextNode.setDistanceFromPrevious(distanceToNextBrewery);
+                maxBreweriesVisited = pathFromNextNode.getSteps();
+                longestBreweryPath = pathFromNextNode;
+                if (maxBreweriesVisited >= (pathFinderConfig.getMaxDepth() - 1))
+                    return new BreweryPath(from, longestBreweryPath, longestBreweryPath.getSteps() + 1);
             }
-
         }
         unmarkNodeAsVisited(from);
 
@@ -101,45 +87,56 @@ public class BreweryPathFinderServiceImpl {
             return null;
         }
 
-        putToCache(from, finalDestination, distanceLeft, longestBreweryPath);
-        return new BreweryPath(from, longestBreweryPath,longestBreweryPath.getSteps() + 1);
+        return new BreweryPath(from, longestBreweryPath, longestBreweryPath.getSteps() + 1);
     }
 
-    private boolean nodeIsTheStartingNode(BreweryLocationNode from, BreweryLocationNode finalDestination) {
+    private BreweryPath getPathFromNextNode(Double distanceToNextBrewery, BreweryNode nextBrewery,
+                                            BreweryNode finalDestination, double distanceLeft, int depth) {
+        if (distanceToNextBrewery > 0 && distanceLeft - distanceToNextBrewery > 0) {
+            if (!nextBrewery.isTraversed() || nodeIsTheStartingNode(nextBrewery, finalDestination)) {
+                return getPath(nextBrewery, finalDestination, distanceLeft - distanceToNextBrewery,
+                        depth + 1);
+            }
+        }
+        return null;
+    }
+
+    private boolean nodeIsTheStartingNode(BreweryNode from, BreweryNode finalDestination) {
         return Objects.equals(from.getBreweryId(), finalDestination.getBreweryId());
     }
 
-    private void initialize(BreweryLocationNode startingPoint) {
-        log.debug("Initialization started");
+    private void initialize(BreweryNode startingPoint) {
+        log.debug("Initialization of neighbours and distances into matrix started");
         if (this.distancesBetweenBreweries.size() < 1) {
             List<Brewery> breweryList = breweryDao.list();
             List<Geocode> geocodeList = geocodeDao.list();
-            List<BreweryLocationNode> breweryLocationNodeList = new ArrayList<>();
+            List<BreweryNode> breweryNodeList = new ArrayList<>();
 
             for (Brewery brewery : breweryList) {
                 Optional<Geocode> geocodeOfBrewery = findGeocodeOfBrewery(brewery, geocodeList);
                 if (geocodeOfBrewery.isPresent()) {
-                    BreweryLocationNode breweryLocationNode = new BreweryLocationNode(brewery.getId(),
+                    BreweryNode breweryNode = new BreweryNode(brewery.getId(),
                             geocodeOfBrewery.get().getLatitude(),
                             geocodeOfBrewery.get().getLongitude(), brewery.getName());
 
-                    breweryLocationNodeList.add(breweryLocationNode);
+                    breweryNodeList.add(breweryNode);
                 }
             }
 
-            breweryLocationNodeList.add(startingPoint);
+            breweryNodeList.add(startingPoint);
 
             this.distancesBetweenBreweries = breweryDistanceMatrixBuilder
-                    .buildDistancesBetweenBreweries(breweryLocationNodeList, pathFinderConfig.getMaxDistanceKm());
+                    .buildDistancesBetweenBreweries(breweryNodeList, pathFinderConfig.getMaxDistanceKm(),
+                            startingPoint);
         }
         log.debug("Initialization finished");
     }
 
-    private void markNodeAsVisited(BreweryLocationNode node) {
+    private void markNodeAsVisited(BreweryNode node) {
         node.setTraversed(true);
     }
 
-    private void unmarkNodeAsVisited(BreweryLocationNode node) {
+    private void unmarkNodeAsVisited(BreweryNode node) {
         node.setTraversed(false);
     }
 
@@ -147,30 +144,19 @@ public class BreweryPathFinderServiceImpl {
         return geocodeList.stream().filter(geocode -> Objects.equals(geocode.getBreweryId(), brewery.getId())).findFirst();
     }
 
-    private List<BreweryLocationNode> unwrapPath(BreweryPath path) {
+    private List<BreweryNode> unwrapPath(BreweryPath path) {
         if (path == null) {
             return new ArrayList<>();
         }
-        List<BreweryLocationNode> breweryLocationNodeList = new ArrayList<>();
+        List<BreweryNode> breweryNodeList = new ArrayList<>();
 
         double distanceFromPrevious = path.getDistanceFromPrevious() == null ? 0 : path.getDistanceFromPrevious();
-        BreweryLocationNode brewery = new BreweryLocationNode(path.getBrewery().getBreweryId(), path.getBrewery().getLatitude(),
+        BreweryNode brewery = new BreweryNode(path.getBrewery().getBreweryId(), path.getBrewery().getLatitude(),
                 path.getBrewery().getLongitude(), path.getBrewery().getName());
-        brewery.setDistanceFromOptimalBrewery(distanceFromPrevious);
-        breweryLocationNodeList.add(brewery);
-        breweryLocationNodeList.addAll(unwrapPath(path.getNextNode()));
-        return breweryLocationNodeList;
-    }
-
-    private BreweryPath getFromCache(BreweryLocationNode from, BreweryLocationNode finalDestination, Double distanceLeft) {
-        Integer hash = MathUtils.hash(from, finalDestination, distanceLeft);
-        return cache.get(hash);
-    }
-
-    private void putToCache(BreweryLocationNode from, BreweryLocationNode finalDestination, Double distanceLeft,
-                            BreweryPath longestBreweryPath) {
-        Integer hash = MathUtils.hash(from, finalDestination, distanceLeft);
-        cache.put(hash, longestBreweryPath);
+        brewery.setDistanceFromPreviousOptimalBrewery(distanceFromPrevious);
+        breweryNodeList.add(brewery);
+        breweryNodeList.addAll(unwrapPath(path.getNextNode()));
+        return breweryNodeList;
     }
 
 }
