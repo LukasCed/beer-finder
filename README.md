@@ -1,2 +1,6 @@
 # beer-finder
-Program to find beers
+Program to find (optimal?) path around the breweries
+
+How to run: 
+TODO
+
