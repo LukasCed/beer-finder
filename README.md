@@ -6,6 +6,7 @@ Program to find (optimal?) path around the breweries
 With Docker:
 1) Build docker image from the dockerfile
 2) Create the container, run it. To pass the arguments simply pass X Y where X is latitude and Y is longitude and both X and Y are any numbers. 
+
 Or, just run the app from your favourite IDE, by passing the arguments first. Or you can build the JAR.
 
 ### Configurable parameters ###
